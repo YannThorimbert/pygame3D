@@ -6,18 +6,54 @@ import pygame.gfxdraw as gfx
 import thorpy
 from stlreader import Object3D
 
-#lire les normales (grace a meshlab sont juste) et regarder colinearite avec source de lumiere
+
+light_pos = V3(1,0,0)
+light_m = V3(20,20,20)
+light_M = V3(230,230,230)
 
 obj1 = Object3D("node_ascii.stl")
-obj1.move(V3(2,2,2))
+obj1.move(V3(0,0,2))
+for t in obj1.triangles:
+    t.color = V3(70,70,255)
+    t.ecolor = t.color
 
 obj2 = Object3D("node_ascii.stl")
-obj2.move(V3(2,2,4))
-for t in obj2.triangles:
-    t.color = (127,127,127)
-    t.ecolor = (0,0,0)
+obj2.move(V3(0,0,5))
 
+##cube = Object3D("cube_ascii.stl")
+cube = Object3D("cube2.stl")
+##cube.scale(1.)
+for t in cube.triangles:
+    t.color = V3(70,70,255)
+    t.ecolor = t.color
+
+##obj1.scale(0.2)
+
+active_obj = obj1
 objs = [obj1, obj2]
+
+
+##objs = [cube]
+##active_obj = cube
+
+def get_color_factor(t, light_pos):
+    line = t.c - light_pos
+    angle = t.n.angle_to(line)
+    return angle/180.
+
+def set_light(c, f):
+    """Modify color c to reflect light exposition f."""
+    if f > 0.5:
+        f = (f-0.5)/0.5
+        return f*light_M + (1.-f)*c
+    else:
+        f = f/0.5
+        return f*c + (1.-f)*light_m
+
+def get_color(t, light_pos):
+    f = get_color_factor(t,light_pos)
+    return set_light(t.color, f)
+
 
 def project(v, win_width, win_height, fov, viewer_distance):
     """ Transforms this 3D point to 2D using a perspective projection. """
@@ -27,45 +63,52 @@ def project(v, win_width, win_height, fov, viewer_distance):
     return V2(x, y)
 
 def func(event):
+    global light_pos
     objs.sort(key=lambda x:x.from_center.length(), reverse=True)
     clock.tick(50)
     screen.fill((255,255,255))
     DS = 0.2
     DA = 2
     if event.key == pygame.K_LEFT:
-        obj1.move(V3(-DS,0,0))
+        active_obj.move(V3(-DS,0,0))
     elif event.key == pygame.K_RIGHT:
-        obj1.move(V3(DS,0,0))
-    elif event.key == pygame.K_UP:
-        obj1.move(V3(0,-DS,0))
+        active_obj.move(V3(DS,0,0))
     elif event.key == pygame.K_DOWN:
-        obj1.move(V3(0,DS,0))
+        active_obj.move(V3(0,-DS,0))
+    elif event.key == pygame.K_UP:
+        active_obj.move(V3(0,DS,0))
     elif event.key == pygame.K_m:
-        obj1.move(V3(0,0,DS))
+        active_obj.move(V3(0,0,DS))
     elif event.key == pygame.K_l:
-        obj1.move(V3(0,0,-DS))
+        active_obj.move(V3(0,0,-DS))
     elif event.key == pygame.K_z:
-        obj1.rotate_around_center(0,0,DA)
+        active_obj.rotate_around_center(0,0,DA)
     elif event.key == pygame.K_u:
-        obj1.rotate_around_center(0,0,-DA)
+        active_obj.rotate_around_center(0,0,-DA)
     elif event.key == pygame.K_x:
-        obj1.rotate_around_center(DA,0,0)
+        active_obj.rotate_around_center(DA,0,0)
     elif event.key == pygame.K_c:
-        obj1.rotate_around_center(-DA,0,0)
+        active_obj.rotate_around_center(-DA,0,0)
     elif event.key == pygame.K_y:
-        obj1.rotate_around_center(0,DA,0)
+        active_obj.rotate_around_center(0,DA,0)
     elif event.key == pygame.K_a:
-        obj1.rotate_around_center(0,-DA,0)
+        active_obj.rotate_around_center(0,-DA,0)
     for obj in objs:
         obj.refresh()
+        i = 0
         for t in obj.triangles:
-            p = []
-            for v in t.vertices():
-                proj = project(v, screen.get_width(), screen.get_height(), 512, 8)
-                x, y = int(proj.x), int(proj.y)
-                p.append((x,y))
-            gfx.filled_trigon(screen, p[0][0], p[0][1], p[1][0], p[1][1], p[2][0], p[2][1], t.color)
-            gfx.aatrigon(screen, p[0][0], p[0][1], p[1][0], p[1][1], p[2][0], p[2][1], t.ecolor)
+            if t.c.z > 1:
+                p = []
+                for v in t.vertices():
+                    proj = project(v, screen.get_width(), screen.get_height(), 512, 8)
+                    x, y = int(proj.x), int(proj.y)
+                    p.append((x,y))
+                color = get_color(t,light_pos)
+##                print(color)
+##                color = t.color
+                gfx.filled_trigon(screen, p[0][0], p[0][1], p[1][0], p[1][1], p[2][0], p[2][1], color)
+    ##            gfx.aatrigon(screen, p[0][0], p[0][1], p[1][0], p[1][1], p[2][0], p[2][1], t.ecolor)
+            i+=1
     pygame.display.flip()
 
 reac = thorpy.Reaction(pygame.KEYDOWN,func)

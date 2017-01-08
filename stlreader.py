@@ -13,20 +13,31 @@ def get_vertex(line):
     if "vertex" in line:
         line = line.split(" ")
         x, y, z = line[-3],line[-2],line[-1]
-        return V3(float(x),float(y),float(z))
+        return V3(float(x),float(y),float(z)), "v"
+    elif "normal" in line:
+        line = line.split(" ")
+        x, y, z = line[-3],line[-2],line[-1]
+        return V3(float(x),float(y),float(z)), "n"
     return False
 
 def get_triangles(lines):
     triangles = []
     k = 0
     vertices = [None, None, None]
+    normal = None
     for line in lines:
         v = get_vertex(line)
         if v:
-            vertices[k] = v
-            k += 1
+            if v[1] == "v":
+                vertices[k] = v[0]
+                k += 1
+            elif v[1] == "n":
+                normal = v[0]
         if k == 3:
-            triangles.append(Triangle(vertices[0],vertices[1],vertices[2]))
+            t = Triangle(vertices[0],vertices[1],vertices[2])
+            t.n = normal
+            triangles.append(t)
+            assert t.n is not None
             k = 0
     assert k == 0
     return triangles
@@ -43,11 +54,11 @@ class Triangle:
         self.v1 = v1
         self.v2 = v2
         self.v3 = v3
-        self.n = self.compute_normal()
+        self.n = None
         self.c = None
         self.color = color
         if color is None:
-            self.color = (random.randint(0,255),random.randint(0,255),random.randint(0,255))
+            self.color = V3(random.randint(0,255),random.randint(0,255),random.randint(0,255))
         self.ecolor = self.color
 
     def compute_normal(self):
@@ -86,7 +97,6 @@ class Object3D:
             v += delta
         self.from_center += delta
 
-
     def rotate_around_center(self, x,y,z):
         tmp = V3(self.from_center)
         self.move(-tmp)
@@ -95,6 +105,9 @@ class Object3D:
                 v.rotate_x_ip(x)
                 v.rotate_y_ip(y)
                 v.rotate_z_ip(z)
+            t.n.rotate_x_ip(x)
+            t.n.rotate_y_ip(y)
+            t.n.rotate_z_ip(z)
         self.move(tmp)
 
     def scale(self, factor):
