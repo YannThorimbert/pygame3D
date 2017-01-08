@@ -4,12 +4,18 @@ import pygame
 import pygame.gfxdraw as gfx
 
 import thorpy
-from stlreader import Object3D
+##from stlreader import Object3D
+from core3d import Object3D
+from light import Light
+from camera import Camera
 
+#comparer perfs core3d vs stlreader quand l'ordi ira mieux
 
 light_pos = V3(1,0,0)
 light_m = V3(20,20,20)
 light_M = V3(230,230,230)
+light = Light(light_pos, light_m, light_M)
+
 
 obj1 = Object3D("node_ascii.stl")
 obj1.move(V3(0,0,2))
@@ -36,31 +42,6 @@ objs = [obj1, obj2]
 ##objs = [cube]
 ##active_obj = cube
 
-def get_color_factor(t, light_pos):
-    line = t.c - light_pos
-    angle = t.n.angle_to(line)
-    return angle/180.
-
-def set_light(c, f):
-    """Modify color c to reflect light exposition f."""
-    if f > 0.5:
-        f = (f-0.5)/0.5
-        return f*light_M + (1.-f)*c
-    else:
-        f = f/0.5
-        return f*c + (1.-f)*light_m
-
-def get_color(t, light_pos):
-    f = get_color_factor(t,light_pos)
-    return set_light(t.color, f)
-
-
-def project(v, win_width, win_height, fov, viewer_distance):
-    """ Transforms this 3D point to 2D using a perspective projection. """
-    factor = fov / (viewer_distance + v.z)
-    x = v.x * factor + win_width / 2
-    y = -v.y * factor + win_height / 2
-    return V2(x, y)
 
 def func(event):
     global light_pos
@@ -100,10 +81,9 @@ def func(event):
             if t.c.z > 1:
                 p = []
                 for v in t.vertices():
-                    proj = project(v, screen.get_width(), screen.get_height(), 512, 8)
-                    x, y = int(proj.x), int(proj.y)
-                    p.append((x,y))
-                color = get_color(t,light_pos)
+                    x,y = cam.project(v)
+                    p.append((int(x),int(y)))
+                color = light.get_color(t)
 ##                print(color)
 ##                color = t.color
                 gfx.filled_trigon(screen, p[0][0], p[0][1], p[1][0], p[1][1], p[2][0], p[2][1], color)
@@ -117,6 +97,8 @@ clock = pygame.time.Clock()
 
 app = thorpy.Application((800,600))
 screen = thorpy.get_screen()
+
+cam = Camera(screen, fov=512, d=8)
 
 g = thorpy.Ghost.make()
 g.add_reaction(reac)
