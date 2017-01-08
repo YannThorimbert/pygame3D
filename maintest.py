@@ -1,70 +1,57 @@
 from pygame.math import Vector2 as V2
 from pygame.math import Vector3 as V3
 import pygame
+import pygame.gfxdraw as gfx
 
 import thorpy
 from stlreader import Object3D
-from camera import Camera
+import core3d
 
 obj = Object3D("cube_ascii.stl")
+obj.move(2,2,2)
 
 def func(event):
-    DA = 0.01
-    DP = 0.05
-    space = pygame.key.get_pressed()[pygame.K_SPACE]
-    #angle
-    if event.key == pygame.K_z:
-        if space:
-            cam.angle.z += DA
-        else:
-            cam.angle.z -= DA
-        cam.refresh_angle()
-    if event.key == pygame.K_x:
-        if space:
-            cam.angle.x += DA
-        else:
-            cam.angle.x -= DA
-        cam.refresh_angle()
-    if event.key == pygame.K_y:
-        if space:
-            cam.angle.y += DA
-        else:
-            cam.angle.y -= DA
-        cam.refresh_angle()
-    #pos
-    if event.key == pygame.K_LEFT:
-        cam.pos.x -= DP
-    if event.key == pygame.K_RIGHT:
-        cam.pos.x += DP
-    if event.key == pygame.K_UP:
-        cam.pos.z -= DP
-    if event.key == pygame.K_DOWN:
-        cam.pos.z += DP
-    if event.key == pygame.K_o:
-        cam.pos.y -= DP
-    if event.key == pygame.K_p:
-        cam.pos.y += DP
-
+    global angleX,angleY,angleZ
+    clock.tick(50)
     screen.fill((0,0,0))
-##    cam.draw_projected_points(obj)
-    cam.draw_projected_triangles(obj)
+    if event.key == pygame.K_x:
+        obj.move(0,0,0.1)
+        angleX, angleY, angleZ = 0,0,0
+    else:
+        angleX, angleY, angleZ = 1,1,1
+    i = 0
+    obj.refresh()
+    screen.fill((0,0,0))
+    for t in obj.triangles:
+        p = []
+        for v in t.vertices():
+            # Rotate the point around X axis, then around Y axis, and finally around Z axis.
+##            r = v.rotateX(angleX).rotateY(angleY).rotateZ(angleZ)
+            r = v.rotate_x(angleX).rotate_y(angleY).rotate_z(angleZ)
+            v.x, v.y, v.z = r.x, r.y, r.z
+            # Transform the point from 3D to 2D
+            proj = v.project(screen.get_width(), screen.get_height(), 256, 4)
+            x, y = int(proj.x), int(proj.y)
+            p.append((x,y))
+        gfx.filled_trigon(screen, p[0][0], p[0][1], p[1][0], p[1][1], p[2][0], p[2][1], t.color)
+        gfx.aatrigon(screen, p[0][0], p[0][1], p[1][0], p[1][1], p[2][0], p[2][1], t.color)
+        i += 1
     pygame.display.flip()
 
 reac = thorpy.Reaction(pygame.KEYDOWN,func)
+clock = pygame.time.Clock()
 
-app = thorpy.Application((500,500))
+
+app = thorpy.Application((800,600))
 screen = thorpy.get_screen()
-cam = Camera(screen,
-             e=V3(0.,0.,2.),
-             pos=V3(2.,2.,2.))
 
 g = thorpy.Ghost.make()
 g.add_reaction(reac)
 
 m = thorpy.Menu(g)
-cam.draw_projected_triangles(obj)
-pygame.display.flip()
 m.play()
 
 app.quit()
+
+
 
