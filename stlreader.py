@@ -13,7 +13,7 @@ def get_vertex(line):
     if "vertex" in line:
         line = line.split(" ")
         x, y, z = line[-3],line[-2],line[-1]
-        return Point3D(float(x),float(y),float(z))
+        return V3(float(x),float(y),float(z))
     return False
 
 def get_triangles(lines):
@@ -31,41 +31,6 @@ def get_triangles(lines):
     assert k == 0
     return triangles
 
-class Point3D(V3):
-
-    def rotateX(self, angle):
-        """ Rotates the point around the X axis by the given angle in degrees. """
-        rad = angle * math.pi / 180
-        cosa = math.cos(rad)
-        sina = math.sin(rad)
-        y = self.y * cosa - self.z * sina
-        z = self.y * sina + self.z * cosa
-        return Point3D(self.x, y, z)
-
-    def rotateY(self, angle):
-        """ Rotates the point around the Y axis by the given angle in degrees. """
-        rad = angle * math.pi / 180
-        cosa = math.cos(rad)
-        sina = math.sin(rad)
-        z = self.z * cosa - self.x * sina
-        x = self.z * sina + self.x * cosa
-        return Point3D(x, self.y, z)
-
-    def rotateZ(self, angle):
-        """ Rotates the point around the Z axis by the given angle in degrees. """
-        rad = angle * math.pi / 180
-        cosa = math.cos(rad)
-        sina = math.sin(rad)
-        x = self.x * cosa - self.y * sina
-        y = self.x * sina + self.y * cosa
-        return Point3D(x, y, self.z)
-
-    def project(self, win_width, win_height, fov, viewer_distance):
-        """ Transforms this 3D point to 2D using a perspective projection. """
-        factor = fov / (viewer_distance + self.z)
-        x = self.x * factor + win_width / 2
-        y = -self.y * factor + win_height / 2
-        return Point3D(x, y, 1)
 
 
 
@@ -83,6 +48,7 @@ class Triangle:
         self.color = color
         if color is None:
             self.color = (random.randint(0,255),random.randint(0,255),random.randint(0,255))
+        self.ecolor = self.color
 
     def compute_normal(self):
         e1 = self.v2 - self.v1
@@ -105,6 +71,7 @@ class Triangle:
     def refresh_center(self):
         self.c = (self.v1 + self.v2 + self.v3)/3. #3 is not necessary (error to all)
         self.d = self.c.length() #could use length_squared
+##        self.M = max([v.length() for v in self.vertices()])
 
 class Object3D:
 
@@ -112,12 +79,23 @@ class Object3D:
         self.filename = filename
         self.lines = get_stl_lines(filename)
         self.triangles = get_triangles(self.lines)
+        self.from_center = V3()
 
-    def move(self, dx,dy,dz):
+    def move(self, delta):
         for v in self.vertices():
-            v.x += dx
-            v.y += dy
-            v.z += dz
+            v += delta
+        self.from_center += delta
+
+
+    def rotate_around_center(self, x,y,z):
+        tmp = V3(self.from_center)
+        self.move(-tmp)
+        for t in self.triangles:
+            for v in t.vertices():
+                v.rotate_x_ip(x)
+                v.rotate_y_ip(y)
+                v.rotate_z_ip(z)
+        self.move(tmp)
 
     def scale(self, factor):
         for t in self.triangles:

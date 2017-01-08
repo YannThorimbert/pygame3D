@@ -5,37 +5,67 @@ import pygame.gfxdraw as gfx
 
 import thorpy
 from stlreader import Object3D
-import core3d
 
-obj = Object3D("cube_ascii.stl")
-obj.move(2,2,2)
+#lire les normales (grace a meshlab sont juste) et regarder colinearite avec source de lumiere
+
+obj1 = Object3D("node_ascii.stl")
+obj1.move(V3(2,2,2))
+
+obj2 = Object3D("node_ascii.stl")
+obj2.move(V3(2,2,4))
+for t in obj2.triangles:
+    t.color = (127,127,127)
+    t.ecolor = (0,0,0)
+
+objs = [obj1, obj2]
+
+def project(v, win_width, win_height, fov, viewer_distance):
+    """ Transforms this 3D point to 2D using a perspective projection. """
+    factor = fov / (viewer_distance + v.z)
+    x = v.x * factor + win_width / 2
+    y = -v.y * factor + win_height / 2
+    return V2(x, y)
 
 def func(event):
-    global angleX,angleY,angleZ
+    objs.sort(key=lambda x:x.from_center.length(), reverse=True)
     clock.tick(50)
-    screen.fill((0,0,0))
-    if event.key == pygame.K_x:
-        obj.move(0,0,0.1)
-        angleX, angleY, angleZ = 0,0,0
-    else:
-        angleX, angleY, angleZ = 1,1,1
-    i = 0
-    obj.refresh()
-    screen.fill((0,0,0))
-    for t in obj.triangles:
-        p = []
-        for v in t.vertices():
-            # Rotate the point around X axis, then around Y axis, and finally around Z axis.
-##            r = v.rotateX(angleX).rotateY(angleY).rotateZ(angleZ)
-            r = v.rotate_x(angleX).rotate_y(angleY).rotate_z(angleZ)
-            v.x, v.y, v.z = r.x, r.y, r.z
-            # Transform the point from 3D to 2D
-            proj = v.project(screen.get_width(), screen.get_height(), 256, 4)
-            x, y = int(proj.x), int(proj.y)
-            p.append((x,y))
-        gfx.filled_trigon(screen, p[0][0], p[0][1], p[1][0], p[1][1], p[2][0], p[2][1], t.color)
-        gfx.aatrigon(screen, p[0][0], p[0][1], p[1][0], p[1][1], p[2][0], p[2][1], t.color)
-        i += 1
+    screen.fill((255,255,255))
+    DS = 0.2
+    DA = 2
+    if event.key == pygame.K_LEFT:
+        obj1.move(V3(-DS,0,0))
+    elif event.key == pygame.K_RIGHT:
+        obj1.move(V3(DS,0,0))
+    elif event.key == pygame.K_UP:
+        obj1.move(V3(0,-DS,0))
+    elif event.key == pygame.K_DOWN:
+        obj1.move(V3(0,DS,0))
+    elif event.key == pygame.K_m:
+        obj1.move(V3(0,0,DS))
+    elif event.key == pygame.K_l:
+        obj1.move(V3(0,0,-DS))
+    elif event.key == pygame.K_z:
+        obj1.rotate_around_center(0,0,DA)
+    elif event.key == pygame.K_u:
+        obj1.rotate_around_center(0,0,-DA)
+    elif event.key == pygame.K_x:
+        obj1.rotate_around_center(DA,0,0)
+    elif event.key == pygame.K_c:
+        obj1.rotate_around_center(-DA,0,0)
+    elif event.key == pygame.K_y:
+        obj1.rotate_around_center(0,DA,0)
+    elif event.key == pygame.K_a:
+        obj1.rotate_around_center(0,-DA,0)
+    for obj in objs:
+        obj.refresh()
+        for t in obj.triangles:
+            p = []
+            for v in t.vertices():
+                proj = project(v, screen.get_width(), screen.get_height(), 512, 8)
+                x, y = int(proj.x), int(proj.y)
+                p.append((x,y))
+            gfx.filled_trigon(screen, p[0][0], p[0][1], p[1][0], p[1][1], p[2][0], p[2][1], t.color)
+            gfx.aatrigon(screen, p[0][0], p[0][1], p[1][0], p[1][1], p[2][0], p[2][1], t.ecolor)
     pygame.display.flip()
 
 reac = thorpy.Reaction(pygame.KEYDOWN,func)
