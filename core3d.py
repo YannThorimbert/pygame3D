@@ -80,13 +80,14 @@ class Triangle:
         self.d = self.c.length() #could use length_squared
 ##        self.M = max([v.length() for v in self.vertices()])
 
-    def rotate(self, x,y,z):
-        for v in [self.v1, self.v2, self.v3]:
-            v.rotate_x_ip(x)
-            v.rotate_y_ip(y)
-            v.rotate_z_ip(z)
-##        self.refresh_normal()
-        #or add self.n to the for loop above
+##    def rotate(self, x,y,z):
+##        for v in [self.v1, self.v2, self.v3]:
+##            v.rotate_x_ip(x)
+##            v.rotate_y_ip(y)
+##            v.rotate_z_ip(z)
+####        self.refresh_normal()
+##        #or add self.n to the for loop above
+
 
 class Object3D:
 
@@ -110,15 +111,51 @@ class Object3D:
             v += delta
         self.from_center += delta
 
-    def rotate_around_center(self, x,y,z):
+    def rotate_x(self, angle, refresh=True):
+        for v in self.vertices.values():
+            v.rotate_x_ip(angle)
+        if refresh:
+            self.refresh_normals()
+
+    def rotate_around_center_x(self, angle, refresh=True):
         tmp = V3(self.from_center)
         self.move(-tmp)
-        for v in self.vertices.values():
-            v.rotate_x_ip(x)
-            v.rotate_y_ip(y)
-            v.rotate_z_ip(z)
+        self.rotate_x(angle, refresh)
         self.move(tmp)
-        self.refresh_normals()
+
+    def rotate_y(self, angle, refresh=True):
+        for v in self.vertices.values():
+            v.rotate_y_ip(angle)
+        if refresh:
+            self.refresh_normals()
+
+    def rotate_around_center_y(self, angle, refresh=True):
+        tmp = V3(self.from_center)
+        self.move(-tmp)
+        self.rotate_y(angle, refresh)
+        self.move(tmp)
+
+    def rotate_z(self, angle, refresh=True):
+        for v in self.vertices.values():
+            v.rotate_z_ip(angle)
+        if refresh:
+            self.refresh_normals()
+
+    def rotate_around_center_z(self, angle, refresh=True):
+        tmp = V3(self.from_center)
+        self.move(-tmp)
+        self.rotate_z(angle, refresh)
+        self.move(tmp)
+
+##    def rotate_around_center(self, x,y,z):
+##        tmp = V3(self.from_center)
+##        self.move(-tmp)
+##        for v in self.vertices.values():
+##            v.rotate_x_ip(x)
+##            v.rotate_y_ip(y)
+##            v.rotate_z_ip(z)
+##        self.move(tmp)
+##        self.refresh_normals()
 
     def refresh_normals(self):
         for t in self.triangles:
@@ -141,7 +178,11 @@ class Object3D:
                 vset.add(tuple(v))
         return vset
 
+class ManualObject3D(Object3D):
 
-
-
-#dabord voir comment exporte de wings3d
+    def __init__(self, triangles):
+        self.triangles = triangles
+        self.from_center = V3()
+        vset = self.get_vertices_set()
+        self.vertices = {val:V3(val) for val in vset}
+        self.compactize()
