@@ -9,14 +9,16 @@ from core3d import Object3D
 from light import Light
 from camera import Camera
 
-#comparer perfs core3d vs stlreader quand l'ordi ira mieux ==> un CHOUILLA mieux
-#rotation : fonctions a part pour x, y et z. Faire sur papier (revient au cas 2D)
-#camera.move, camera.rotate ==> agit sur objs
+#opti: utiliser les dist au carre. Pygame vs math vs manuel
+#si la technique des angles marche pas, enlever la normalisation des normales...
 
-light_pos = V3(1,0,0)
+#comparer perfs core3d vs stlreader quand l'ordi ira mieux ==> un CHOUILLA mieux
+
+light_pos = V3(0,0,-1000)
 light_m = V3(20,20,20)
-light_M = V3(230,230,230)
+light_M = V3(200,200,200)
 light = Light(light_pos, light_m, light_M)
+USE_LIGHT = True
 
 
 obj1 = Object3D("node_ascii.stl")
@@ -27,13 +29,6 @@ for t in obj1.triangles:
 
 obj2 = Object3D("node_ascii.stl")
 obj2.move(V3(0,0,5))
-
-##cube = Object3D("cube_ascii.stl"); cube.refresh_normals()
-cube = Object3D("cube2.stl")
-cube.move(V3(0,0,4))
-for t in cube.triangles:
-    t.color = V3(70,70,255)
-    t.ecolor = t.color
 
 from core3d import ManualObject3D, Triangle
 a = 4
@@ -47,31 +42,48 @@ t1.move(V3(0,0,5))
 
 ##obj1.scale(0.2)
 
-active_obj = obj1
-objs = [obj1]
+##active_obj = obj1
+##objs = [obj1]
 
+##cube = Object3D("cube_ascii.stl"); cube.refresh_normals()
+##cube = Object3D("cube2.stl")
+##cube.move(V3(0,0,4))
+##for t in cube.triangles:
+##    t.color = V3(70,70,255)
+##    t.ecolor = t.color
 ##objs = [cube]
+##cube.compute_neighbours()
 ##active_obj = cube
+##colors = [(255,0,0),(255,0,0),
+##            (0,200,0),(0,200,0),
+##            (0,0,255),(0,0,255),
+##            (255,255,0),(255,255,0),
+##            (255,0,255),(255,0,255),
+##            (255,255,255),(255,255,255)]
+##colors = [V3(c) for c in colors]
+##for i in range(len(cube.triangles)):
+##    cube.triangles[i].color = colors[::2][i%6]
+
 
 ##active_obj = t1
 ##objs = [t1]
 
 ##fighter = Object3D("meshes/chasseur_biplace.stl")
-fighter = Object3D("meshes/THM15.stl")
+fighter = Object3D("meshes/f4.stl")
 for t in fighter.triangles:
     t.color = V3(70,70,255)
     t.ecolor = t.color
-fighter.move(V3(0,0,5))
+fighter.move(V3(0,0,10))
 
-##active_obj = fighter
-##objs = [fighter]
+active_obj = fighter
+objs = [fighter]
 
 def func(event):
     global light_pos
     objs.sort(key=lambda x:x.from_center.length(), reverse=True)
     screen.fill((255,255,255))
     DS = 0.2
-    DA = 2
+    DA = 10
     print(pygame.event.event_name(event.type))
     if event.key == pygame.K_LEFT:
         active_obj.move(V3(-DS,0,0))
@@ -109,7 +121,10 @@ def func(event):
                 for v in t.vertices():
                     x,y = cam.project(v)
                     p.append((int(x),int(y)))
-                color = light.get_color(t)
+                if USE_LIGHT:
+                    color = light.get_color(t)
+                else:
+                    color = t.color
 ##                print(color)
 ##                color = t.color
 ##                print(p)

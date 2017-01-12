@@ -56,6 +56,8 @@ class Triangle:
         if color is None:
             self.color = V3(random.randint(0,255),random.randint(0,255),random.randint(0,255))
         self.ecolor = self.color
+        self.neighs = []
+        self.pd = None
 
     def compute_normal(self):
         e1 = self.v2 - self.v1
@@ -68,26 +70,30 @@ class Triangle:
         return n1
 
     def refresh_normal(self):
-        self.n = self.compute_normal()
+        self.n = self.compute_normal().normalize()
 
     def vertices(self):
         yield self.v1
         yield self.v2
         yield self.v3
 
-    def refresh_center(self):
-        self.c = (self.v1 + self.v2 + self.v3)/3. #3 is not necessary (error to all)
-        self.d = self.c.length() #could use length_squared
-##        self.M = max([v.length() for v in self.vertices()])
+##    def refresh_cd(self):
+##        self.c = (self.v1 + self.v2 + self.v3)/3.
+##        self.d = self.c.length_squared()
 
-##    def rotate(self, x,y,z):
-##        for v in [self.v1, self.v2, self.v3]:
-##            v.rotate_x_ip(x)
-##            v.rotate_y_ip(y)
-##            v.rotate_z_ip(z)
-####        self.refresh_normal()
-##        #or add self.n to the for loop above
+    def refresh_cd(self):
+        self.c = (self.v1 + self.v2 + self.v3)/3.
+        self.d = self.c.length_squared()
 
+    def refresh_pd(self):
+        self.pd = self.d
+        counter = 1
+        for buddy in self.neighs:
+            a = self.n.angle_to(buddy.n)
+            if a == 0:
+                counter += 1
+                self.pd += buddy.d
+        self.pd /= counter
 
 class Object3D:
 
@@ -99,6 +105,21 @@ class Object3D:
         vset = self.get_vertices_set()
         self.vertices = {val:V3(val) for val in vset}
         self.compactize()
+
+    def compute_neighbours(self):
+        for t1 in self.triangles:
+            for t2 in self.triangles:
+                if t1 != t2:
+                    counter = 0
+                    for v in t1.vertices():
+                        if v == t2.v1:
+                            counter += 1
+                        elif v == t2.v2:
+                            counter += 1
+                        elif v == t2.v3:
+                            counter += 1
+                    if counter > 1:
+                        t1.neighs.append(t2)
 
     def compactize(self):
         for t in self.triangles:
@@ -168,8 +189,11 @@ class Object3D:
 
     def refresh(self):
         for t in self.triangles:
-            t.refresh_center()
-        self.triangles.sort(key=lambda x:x.d, reverse=True)
+            t.refresh_cd()
+        for t in self.triangles:
+            t.refresh_pd()
+        self.triangles.sort(key=lambda x:x.pd, reverse=True)
+##        self.triangles.sort(key=lambda x:x.d,reverse=True)
 
     def get_vertices_set(self):
         vset = set()
